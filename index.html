@@ -3,37 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gato con IA Invencible</title>
+    <title>Tres en Raya - IA</title>
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Gato con IA</h1>
-        <div class="game-info">
-            <p id="status">Tu turno (X)</p>
-            <button id="reset">Reiniciar Juego</button>
+        <header>
+            <h1>TRES EN RAYA</h1>
+            <p class="subtitle">Algoritmos de Búsqueda Inteligente</p>
+        </header>
+
+        <div class="game-controls">
+            <div class="difficulty-selector">
+                <h3>Nivel de IA</h3>
+                <div class="difficulty-buttons">
+                    <button id="easy" class="active">Básico (Aleatorio)</button>
+                    <button id="medium">Intermedio (Heurística)</button>
+                    <button id="hard">Avanzado (Minimax)</button>
+                </div>
+            </div>
+            
+            <div class="game-info">
+                <div id="status">Tu turno (Jugador X)</div>
+                <button id="reset">Reiniciar Juego</button>
+            </div>
         </div>
-        <div class="game-board" id="board">
-            <div class="cell" data-index="0"></div>
-            <div class="cell" data-index="1"></div>
-            <div class="cell" data-index="2"></div>
-            <div class="cell" data-index="3"></div>
-            <div class="cell" data-index="4"></div>
-            <div class="cell" data-index="5"></div>
-            <div class="cell" data-index="6"></div>
-            <div class="cell" data-index="7"></div>
-            <div class="cell" data-index="8"></div>
+
+        <div class="board" id="board">
+            <!-- Celdas generadas dinámicamente con JS -->
         </div>
-        <div class="difficulty">
-            <label for="difficulty">Dificultad:</label>
-            <select id="difficulty">
-                <option value="easy">Fácil</option>
-                <option value="medium">Medio</option>
-                <option value="hard" selected>Difícil (IA invencible)</option>
-            </select>
+
+        <div class="metrics">
+            <h3>Métricas de Rendimiento</h3>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <span class="metric-value" id="time-metric">-</span>
+                    <span class="metric-label">Tiempo (ms)</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value" id="moves-metric">-</span>
+                    <span class="metric-label">Movimientos</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value" id="nodes-metric">-</span>
+                    <span class="metric-label">Nodos evaluados</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-value" id="depth-metric">-</span>
+                    <span class="metric-label">Profundidad</span>
+                </div>
+            </div>
         </div>
     </div>
+
     <script src="js/script.js"></script>
 </body>
 </html>

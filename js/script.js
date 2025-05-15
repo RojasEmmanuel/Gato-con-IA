@@ -1,154 +1,218 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const board = document.getElementById('board');
-    const cells = document.querySelectorAll('.cell');
-    const status = document.getElementById('status');
-    const resetButton = document.getElementById('reset');
-    const difficultySelect = document.getElementById('difficulty');
-    
-    let gameState = ['', '', '', '', '', '', '', '', ''];
-    let currentPlayer = 'X';
-    let gameActive = true;
-    let winningCombination = [];
-    
-    // Combinaciones ganadoras
-    const winningConditions = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Filas
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columnas
-        [0, 4, 8], [2, 4, 6]             // Diagonales
-    ];
-    
-    // Inicializar el juego
-    function initializeGame() {
-        gameState = ['', '', '', '', '', '', '', '', ''];
-        currentPlayer = 'X';
-        gameActive = true;
-        winningCombination = [];
-        status.textContent = 'Tu turno (X)';
+/**
+ * Clase principal del juego Tres en Raya
+ * Contiene la lógica del juego y los algoritmos de IA
+ */
+class TicTacToe {
+    constructor() {
+        this.board = Array(9).fill(null);
+        this.currentPlayer = 'X'; // X es el jugador humano
+        this.gameActive = true;
+        this.aiLevel = 'easy'; // Nivel por defecto
+        this.metrics = {
+            nodesEvaluated: 0,
+            maxDepth: 0,
+            moveTime: 0
+        };
         
-        cells.forEach(cell => {
-            cell.textContent = '';
-            cell.classList.remove('x', 'o', 'winning-line');
-        });
+        this.initElements();
+        this.initEventListeners();
+        this.renderBoard();
     }
     
-    // Manejar el click en una celda
-    function handleCellClick(e) {
-        if (!gameActive) return;
+    /**
+     * Inicializa los elementos del DOM
+     */
+    initElements() {
+        this.boardElement = document.getElementById('board');
+        this.statusElement = document.getElementById('status');
+        this.resetButton = document.getElementById('reset');
         
-        const clickedCell = e.target;
-        const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+        // Botones de dificultad
+        this.easyButton = document.getElementById('easy');
+        this.mediumButton = document.getElementById('medium');
+        this.hardButton = document.getElementById('hard');
         
-        if (gameState[clickedCellIndex] !== '') return;
+        // Elementos de métricas
+        this.timeMetric = document.getElementById('time-metric');
+        this.movesMetric = document.getElementById('moves-metric');
+        this.nodesMetric = document.getElementById('nodes-metric');
+        this.depthMetric = document.getElementById('depth-metric');
         
-        makeMove(clickedCell, clickedCellIndex, 'X');
+        // Generar celdas del tablero
+        this.boardElement.innerHTML = '';
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.dataset.index = i;
+            this.boardElement.appendChild(cell);
+        }
+        this.cells = document.querySelectorAll('.cell');
+    }
+    
+    /**
+     * Inicializa los event listeners
+     */
+    initEventListeners() {
+        // Click en celdas
+        this.cells.forEach(cell => {
+            cell.addEventListener('click', () => this.handleCellClick(cell));
+        });
         
-        if (checkWin('X')) {
-            handleGameEnd('X');
+        // Botón de reinicio
+        this.resetButton.addEventListener('click', () => this.resetGame());
+        
+        // Selectores de dificultad
+        this.easyButton.addEventListener('click', () => this.setDifficulty('easy'));
+        this.mediumButton.addEventListener('click', () => this.setDifficulty('medium'));
+        this.hardButton.addEventListener('click', () => this.setDifficulty('hard'));
+    }
+    
+    /**
+     * Maneja el click en una celda
+     * @param {HTMLElement} cell - Elemento HTML de la celda clickeada
+     */
+    handleCellClick(cell) {
+        const index = parseInt(cell.dataset.index);
+        
+        // Validar movimiento
+        if (!this.gameActive || this.board[index] !== null || this.currentPlayer !== 'X') {
             return;
         }
         
-        if (!gameState.includes('')) {
-            handleGameEnd(null);
-            return;
+        // Realizar movimiento del jugador
+        this.makeMove(index, 'X');
+        
+        // Verificar si el juego continúa
+        if (this.gameActive) {
+            // Turno de la IA después de un breve retraso para mejor UX
+            setTimeout(() => this.aiTurn(), 500);
         }
+    }
+    
+    /**
+     * Realiza un movimiento en el tablero
+     * @param {number} index - Índice de la celda (0-8)
+     * @param {string} player - Jugador ('X' u 'O')
+     */
+    makeMove(index, player) {
+        this.board[index] = player;
+        this.renderBoard();
         
-        currentPlayer = 'O';
-        status.textContent = 'Turno de la IA (O)';
-        
-        setTimeout(() => {
-            makeAIMove();
-            
-            if (checkWin('O')) {
-                handleGameEnd('O');
-                return;
-            }
-            
-            if (!gameState.includes('')) {
-                handleGameEnd(null);
-                return;
-            }
-            
-            currentPlayer = 'X';
-            status.textContent = 'Tu turno (X)';
-        }, 500);
-    }
-    
-    // Realizar un movimiento
-    function makeMove(cell, index, player) {
-        gameState[index] = player;
-        cell.textContent = player;
-        cell.classList.add(player.toLowerCase());
-    }
-    
-    // Verificar si hay un ganador
-    function checkWin(player) {
-        for (const condition of winningConditions) {
-            if (condition.every(index => gameState[index] === player)) {
-                winningCombination = condition;
-                highlightWinningCells(condition);
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    // Resaltar celdas ganadoras
-    function highlightWinningCells(cellsToHighlight) {
-        cellsToHighlight.forEach(index => {
-            const cell = document.querySelector(`.cell[data-index="${index}"]`);
-            cell.classList.add('winning-line');
-        });
-    }
-    
-    // Manejar el final del juego
-    function handleGameEnd(winner) {
-        gameActive = false;
-        
-        if (winner === 'X') {
-            status.textContent = '¡Ganaste!';
-        } else if (winner === 'O') {
-            status.textContent = '¡La IA ganó!';
+        // Verificar estado del juego
+        const winner = this.checkWinner();
+        if (winner) {
+            this.endGame(winner);
+        } else if (this.isBoardFull()) {
+            this.endGame(null); // Empate
         } else {
-            status.textContent = '¡Empate!';
+            this.currentPlayer = player === 'X' ? 'O' : 'X';
+            this.updateStatus();
         }
     }
     
-    // Movimiento de la IA
-    function makeAIMove() {
-        const difficulty = difficultySelect.value;
-        let moveIndex;
+    /**
+     * Turno de la IA
+     */
+    aiTurn() {
+        if (!this.gameActive || this.currentPlayer !== 'O') return;
         
-        if (difficulty === 'easy') {
-            moveIndex = getRandomMove();
-        } else if (difficulty === 'medium') {
-            moveIndex = Math.random() > 0.5 ? getRandomMove() : findBestMove();
-        } else {
-            moveIndex = findBestMove();
+        // Reiniciar métricas
+        this.resetMetrics();
+        const startTime = performance.now();
+        
+        let move;
+        switch (this.aiLevel) {
+            case 'easy':
+                move = this.getRandomMove();
+                break;
+            case 'medium':
+                move = this.getHeuristicMove();
+                break;
+            case 'hard':
+                move = this.getMinimaxMove();
+                break;
         }
         
-        const cell = document.querySelector(`.cell[data-index="${moveIndex}"]`);
-        makeMove(cell, moveIndex, 'O');
+        // Calcular tiempo de movimiento
+        this.metrics.moveTime = performance.now() - startTime;
+        this.updateMetrics();
+        
+        // Realizar movimiento
+        if (move !== null && move !== undefined) {
+            this.makeMove(move, 'O');
+        }
     }
     
-    // Obtener movimiento aleatorio
-    function getRandomMove() {
-        const availableMoves = gameState
-            .map((val, idx) => val === '' ? idx : null)
+    /**
+     * Algoritmo de IA nivel básico: movimiento aleatorio
+     * @returns {number} Índice del movimiento
+     */
+    getRandomMove() {
+        const emptyCells = this.board
+            .map((cell, index) => cell === null ? index : null)
             .filter(val => val !== null);
         
-        return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        if (emptyCells.length === 0) return null;
+        
+        const randomIndex = Math.floor(Math.random() * emptyCells.length);
+        return emptyCells[randomIndex];
     }
     
-    // Algoritmo Minimax para encontrar el mejor movimiento
-    function findBestMove() {
-        let bestScore = -Infinity;
-        let bestMove;
+    /**
+     * Algoritmo de IA nivel intermedio: heurística de un paso
+     * @returns {number} Índice del movimiento
+     */
+    getHeuristicMove() {
+        // 1. Buscar movimiento ganador
+        for (let i = 0; i < 9; i++) {
+            if (this.board[i] === null) {
+                const boardCopy = [...this.board];
+                boardCopy[i] = 'O';
+                if (this.checkWinnerOnBoard(boardCopy)) {
+                    return i;
+                }
+            }
+        }
         
-        for (let i = 0; i < gameState.length; i++) {
-            if (gameState[i] === '') {
-                gameState[i] = 'O';
-                let score = minimax(gameState, 0, false);
-                gameState[i] = '';
+        // 2. Bloquear jugador si tiene movimiento ganador
+        for (let i = 0; i < 9; i++) {
+            if (this.board[i] === null) {
+                const boardCopy = [...this.board];
+                boardCopy[i] = 'X';
+                if (this.checkWinnerOnBoard(boardCopy)) {
+                    return i;
+                }
+            }
+        }
+        
+        // 3. Estrategia básica: centro, esquinas, luego bordes
+        const movePriority = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+        for (const move of movePriority) {
+            if (this.board[move] === null) {
+                return move;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Algoritmo de IA nivel avanzado: Minimax con poda alfa-beta
+     * @returns {number} Índice del movimiento
+     */
+    getMinimaxMove() {
+        this.metrics.nodesEvaluated = 0;
+        this.metrics.maxDepth = 0;
+        
+        let bestScore = -Infinity;
+        let bestMove = null;
+        
+        // Probar todos los movimientos posibles
+        for (let i = 0; i < 9; i++) {
+            if (this.board[i] === null) {
+                this.board[i] = 'O';
+                const score = this.minimax(this.board, 0, false, -Infinity, Infinity);
+                this.board[i] = null;
                 
                 if (score > bestScore) {
                     bestScore = score;
@@ -160,56 +224,218 @@ document.addEventListener('DOMContentLoaded', () => {
         return bestMove;
     }
     
-    // Implementación de Minimax con poda alfa-beta
-    function minimax(board, depth, isMaximizing, alpha = -Infinity, beta = Infinity) {
-        // Verificar si hay un ganador
-        const xWin = winningConditions.some(cond => cond.every(i => board[i] === 'X'));
-        const oWin = winningConditions.some(cond => cond.every(i => board[i] === 'O'));
+    /**
+     * Algoritmo Minimax con poda alfa-beta
+     * @param {Array} board - Tablero actual
+     * @param {number} depth - Profundidad actual
+     * @param {boolean} isMaximizing - Si es turno del maximizador
+     * @param {number} alpha - Valor alpha para poda
+     * @param {number} beta - Valor beta para poda
+     * @returns {number} Puntuación del nodo
+     */
+    minimax(board, depth, isMaximizing, alpha, beta) {
+        this.metrics.nodesEvaluated++;
+        this.metrics.maxDepth = Math.max(this.metrics.maxDepth, depth);
         
-        if (oWin) return 10 - depth;
-        if (xWin) return -10 + depth;
-        if (!board.includes('')) return 0;
+        // Verificar estado terminal
+        const winner = this.checkWinnerOnBoard(board);
+        if (winner === 'O') return 10 - depth; // Premio por ganar rápido
+        if (winner === 'X') return depth - 10;  // Castigo por perder lento
+        if (this.isBoardFullOnBoard(board)) return 0;
         
         if (isMaximizing) {
             let bestScore = -Infinity;
-            
-            for (let i = 0; i < board.length; i++) {
-                if (board[i] === '') {
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === null) {
                     board[i] = 'O';
-                    let score = minimax(board, depth + 1, false, alpha, beta);
-                    board[i] = '';
+                    const score = this.minimax(board, depth + 1, false, alpha, beta);
+                    board[i] = null;
                     bestScore = Math.max(score, bestScore);
                     alpha = Math.max(alpha, bestScore);
-                    if (beta <= alpha) break;
+                    if (beta <= alpha) break; // Poda beta
                 }
             }
-            
             return bestScore;
         } else {
             let bestScore = Infinity;
-            
-            for (let i = 0; i < board.length; i++) {
-                if (board[i] === '') {
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === null) {
                     board[i] = 'X';
-                    let score = minimax(board, depth + 1, true, alpha, beta);
-                    board[i] = '';
+                    const score = this.minimax(board, depth + 1, true, alpha, beta);
+                    board[i] = null;
                     bestScore = Math.min(score, bestScore);
                     beta = Math.min(beta, bestScore);
-                    if (beta <= alpha) break;
+                    if (beta <= alpha) break; // Poda alfa
                 }
             }
-            
             return bestScore;
         }
     }
     
-    // Event listeners
-    cells.forEach(cell => {
-        cell.addEventListener('click', handleCellClick);
-    });
+    /**
+     * Verifica si hay un ganador en el tablero actual
+     * @returns {string|null} 'X', 'O' o null si no hay ganador
+     */
+    checkWinner() {
+        return this.checkWinnerOnBoard(this.board);
+    }
     
-    resetButton.addEventListener('click', initializeGame);
+    /**
+     * Verifica si hay un ganador en un tablero específico
+     * @param {Array} board - Tablero a verificar
+     * @returns {string|null} 'X', 'O' o null si no hay ganador
+     */
+    checkWinnerOnBoard(board) {
+        const winPatterns = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Filas
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columnas
+            [0, 4, 8], [2, 4, 6]             // Diagonales
+        ];
+        
+        for (const pattern of winPatterns) {
+            const [a, b, c] = pattern;
+            if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                return board[a];
+            }
+        }
+        
+        return null;
+    }
     
-    // Inicializar el juego al cargar
-    initializeGame();
+    /**
+     * Verifica si el tablero está lleno (empate)
+     * @returns {boolean}
+     */
+    isBoardFull() {
+        return this.isBoardFullOnBoard(this.board);
+    }
+    
+    /**
+     * Verifica si un tablero específico está lleno
+     * @param {Array} board - Tablero a verificar
+     * @returns {boolean}
+     */
+    isBoardFullOnBoard(board) {
+        return board.every(cell => cell !== null);
+    }
+    
+    /**
+     * Finaliza el juego
+     * @param {string|null} winner - 'X', 'O' o null para empate
+     */
+    endGame(winner) {
+        this.gameActive = false;
+        
+        if (winner) {
+            this.statusElement.textContent = `¡${winner === 'X' ? 'Ganaste' : 'La IA ganó'}!`;
+            // Resaltar combinación ganadora
+            this.highlightWinningCells();
+        } else {
+            this.statusElement.textContent = '¡Empate!';
+        }
+    }
+    
+    /**
+     * Resalta las celdas de la combinación ganadora
+     */
+    highlightWinningCells() {
+        const winPatterns = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Filas
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columnas
+            [0, 4, 8], [2, 4, 6]             // Diagonales
+        ];
+        
+        for (const pattern of winPatterns) {
+            const [a, b, c] = pattern;
+            if (this.board[a] && this.board[a] === this.board[b] && this.board[a] === this.board[c]) {
+                this.cells[a].classList.add('win');
+                this.cells[b].classList.add('win');
+                this.cells[c].classList.add('win');
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Actualiza el estado del juego en la UI
+     */
+    updateStatus() {
+        if (this.gameActive) {
+            this.statusElement.textContent = 
+                this.currentPlayer === 'X' ? 'Tu turno (Jugador X)' : 'Turno de la IA (Jugador O)';
+        }
+    }
+    
+    /**
+     * Actualiza las métricas en la UI
+     */
+    updateMetrics() {
+        this.timeMetric.textContent = this.metrics.moveTime.toFixed(2);
+        this.movesMetric.textContent = this.board.filter(cell => cell !== null).length;
+        this.nodesMetric.textContent = this.metrics.nodesEvaluated;
+        this.depthMetric.textContent = this.metrics.maxDepth;
+    }
+    
+    /**
+     * Reinicia las métricas
+     */
+    resetMetrics() {
+        this.metrics = {
+            nodesEvaluated: 0,
+            maxDepth: 0,
+            moveTime: 0
+        };
+        this.updateMetrics();
+    }
+    
+    /**
+     * Renderiza el tablero en la UI
+     */
+    renderBoard() {
+        this.cells.forEach((cell, index) => {
+            cell.textContent = this.board[index] || '';
+            cell.className = 'cell';
+            if (this.board[index] === 'X') cell.classList.add('x');
+            if (this.board[index] === 'O') cell.classList.add('o');
+        });
+    }
+    
+    /**
+     * Establece el nivel de dificultad de la IA
+     * @param {string} level - 'easy', 'medium' o 'hard'
+     */
+    setDifficulty(level) {
+        this.aiLevel = level;
+        
+        // Actualizar botones activos
+        this.easyButton.classList.remove('active');
+        this.mediumButton.classList.remove('active');
+        this.hardButton.classList.remove('active');
+        
+        if (level === 'easy') this.easyButton.classList.add('active');
+        if (level === 'medium') this.mediumButton.classList.add('active');
+        if (level === 'hard') this.hardButton.classList.add('active');
+        
+        // Reiniciar juego si está en progreso
+        if (this.gameActive && this.currentPlayer === 'O') {
+            this.aiTurn();
+        }
+    }
+    
+    /**
+     * Reinicia el juego
+     */
+    resetGame() {
+        this.board = Array(9).fill(null);
+        this.currentPlayer = 'X';
+        this.gameActive = true;
+        this.resetMetrics();
+        this.renderBoard();
+        this.updateStatus();
+    }
+}
+
+// Inicializar el juego cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    const game = new TicTacToe();
 });
